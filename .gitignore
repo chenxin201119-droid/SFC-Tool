@@ -1,0 +1,26 @@
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+
+# Build
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+.nuget/
+
+# IDE / OS
+*.rsuser
+.vscode/
+*.log
+Thumbs.db
