@@ -533,17 +533,30 @@ WHERE s.WO_NO = @WO_NO
                 AppendLaunchLog("No MODEL_NO found for this Work_Order.");
                 lblStatusRoute.Text = "No MODEL_NO found for this Work_Order";
                 lblStatusRoute.ForeColor = Color.FromArgb(255, 59, 48);
+                MessageBox.Show("该工单暂未绑定机种", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             AppendLaunchLog($"MODEL_NO: {modelNo}");
 
-            // 3. Find .lnk or .exe in folder by MODEL_NO (name without extension)
-            var targetPath = FindModelFile(folder, modelNo);
+            // 3. 按规则截取匹配名（代号 + 最后5位 → 代号-最后5位），用截取后的值匹配程序
+            var matchName = ExtractMatchName(modelNo);
+            if (string.IsNullOrEmpty(matchName))
+            {
+                AppendLaunchLog("MODEL_NO format invalid for extraction (need part after first '-' with length >= 5).");
+                lblStatusRoute.Text = "MODEL_NO 格式不符合截取规则";
+                lblStatusRoute.ForeColor = Color.FromArgb(255, 59, 48);
+                MessageBox.Show("该工单暂未绑定机种", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            AppendLaunchLog($"Match name: {matchName}");
+
+            var targetPath = FindModelFile(folder, matchName);
             if (targetPath == null)
             {
-                AppendLaunchLog($"No .lnk or .exe found for MODEL_NO: {modelNo}");
-                lblStatusRoute.Text = $"No .lnk or .exe found for MODEL_NO: {modelNo}";
+                AppendLaunchLog($"No .lnk or .exe found for match name: {matchName}");
+                lblStatusRoute.Text = $"No .lnk or .exe found for: {matchName}";
                 lblStatusRoute.ForeColor = Color.FromArgb(255, 59, 48);
+                MessageBox.Show("该机种暂未创建机种模板", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             AppendLaunchLog($"Found: {Path.GetFileName(targetPath)}");
@@ -581,10 +594,28 @@ WHERE s.WO_NO = @WO_NO
         }
     }
 
-    private static string? FindModelFile(string folder, string modelNo)
+    /// <summary>
+    /// 从 MODEL_NO 截取匹配名：第一个 '-' 之后取第 2、3 位为代号，最后 5 个字符为后半部分，拼成 "代号-后半部分"。
+    /// 例如 2H-AEFCFI63241 → AEFCFI63241 → EF + 63241 → EF-63241。
+    /// 格式不符时返回 null。
+    /// </summary>
+    private static string? ExtractMatchName(string modelNo)
+    {
+        if (string.IsNullOrWhiteSpace(modelNo)) return null;
+        var s = modelNo.Trim();
+        var idx = s.IndexOf('-');
+        if (idx < 0 || idx >= s.Length - 1) return null;
+        var part = s[(idx + 1)..];
+        if (part.Length < 5) return null;
+        var code = part.Substring(1, 2);
+        var last5 = part.Substring(part.Length - 5, 5);
+        return $"{code}-{last5}";
+    }
+
+    private static string? FindModelFile(string folder, string nameToMatch)
     {
         var dir = new DirectoryInfo(folder);
-        var nameMatch = modelNo.Trim();
+        var nameMatch = nameToMatch.Trim();
         foreach (var ext in new[] { ".lnk", ".exe" })
         {
             var path = Path.Combine(folder, nameMatch + ext);
