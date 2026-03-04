@@ -542,7 +542,7 @@ WHERE s.WO_NO = @WO_NO
             var matchName = ExtractMatchName(modelNo);
             if (string.IsNullOrEmpty(matchName))
             {
-                AppendLaunchLog("MODEL_NO format invalid for extraction (need part after first '-' with length >= 5).");
+                AppendLaunchLog("MODEL_NO format invalid for extraction (need part after first '-' with length >= 8).");
                 lblStatusRoute.Text = "MODEL_NO 格式不符合截取规则";
                 lblStatusRoute.ForeColor = Color.FromArgb(255, 59, 48);
                 MessageBox.Show("该工单暂未绑定机种", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -595,9 +595,9 @@ WHERE s.WO_NO = @WO_NO
     }
 
     /// <summary>
-    /// 从 MODEL_NO 截取匹配名：第一个 '-' 之后取第 2、3 位为代号，最后 5 个字符为后半部分，拼成 "代号-后半部分"。
-    /// 例如 2H-AEFCFI63241 → AEFCFI63241 → EF + 63241 → EF-63241。
-    /// 格式不符时返回 null。
+    /// 从 MODEL_NO 截取匹配名：第一个 '-' 之后取前三位（第 1、2、3 位）为代号，最后 5 个字符为后半部分，拼成 "代号-后半部分"。
+    /// 例如 2H-AEFCFI63241 → AEFCFI63241 → AEF + 63241 → AEF-63241。
+    /// 格式不符时返回 null（需至少 8 个字符：前 3 + 最后 5）。
     /// </summary>
     private static string? ExtractMatchName(string modelNo)
     {
@@ -606,8 +606,8 @@ WHERE s.WO_NO = @WO_NO
         var idx = s.IndexOf('-');
         if (idx < 0 || idx >= s.Length - 1) return null;
         var part = s[(idx + 1)..];
-        if (part.Length < 5) return null;
-        var code = part.Substring(1, 2);
+        if (part.Length < 8) return null;
+        var code = part.Substring(0, 3);
         var last5 = part.Substring(part.Length - 5, 5);
         return $"{code}-{last5}";
     }
